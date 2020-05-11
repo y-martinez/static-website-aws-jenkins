@@ -257,7 +257,7 @@ Resources:
               
               echo "Installing docker and its dependencies"
               apt-get update
-              apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+              apt-get install -y apt-transport-https ca-certificates curl software-properties-common unzip tidy
               curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
               add-apt-repository \
                 "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
@@ -275,7 +275,6 @@ Resources:
               echo "Installing Jenkins with docker-compose"
               curl -L https://raw.githubusercontent.com/y-martinez/static-website-aws-jenkins/master/docker-compose.yml -o docker-compose.yml
               curl -L https://raw.githubusercontent.com/y-martinez/static-website-aws-jenkins/master/Dockerfile -o docker-compose.yml
-              cat docker-compose.yml
               
               docker pull jenkins/jenkins
               docker-compose build
@@ -286,8 +285,7 @@ Resources:
               
               sudo chown -R ubuntu:ubuntu /home/Jenkins
               
-              echo "Installing the tools unzip and tidy linter"
-              apt-get install unzip tidy
+              echo "Installing aws-cli"
               curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
               unzip -qq awscliv2.zip
               ./aws/install
