@@ -221,6 +221,14 @@ Resources:
           FromPort: 8080
           ToPort: 8080
           CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 50000
+          ToPort: 50000
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
       - IpProtocol: tcp
         FromPort: 0
@@ -276,7 +284,6 @@ Resources:
               curl -L https://raw.githubusercontent.com/y-martinez/static-website-aws-jenkins/master/docker-compose.yml -o docker-compose.yml
               curl -L https://raw.githubusercontent.com/y-martinez/static-website-aws-jenkins/master/Dockerfile -o Dockerfile
               
-              docker pull jenkins/jenkins
               docker-compose build
               docker-compose up -d
 
