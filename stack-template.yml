@@ -285,13 +285,13 @@ Resources:
               curl -L https://raw.githubusercontent.com/y-martinez/static-website-aws-jenkins/master/Dockerfile -o Dockerfile
               
               #docker-compose build
-              docker pull bitnami/jenkins
+              #docker pull jenkins/jenkins
+              mkdir /home/ubuntu/Jenkins
+              sudo chown -R ubuntu:ubuntu /home/ubuntu/Jenkins
               docker-compose up -d
 
               echo "Exporting the default Jenkins' password"
               sudo cat /home/ubuntu/Jenkins/secrets/initialAdminPassword > /home/ubuntu/initialAdminPassword
-              
-              sudo chown -R ubuntu:ubuntu /home/Jenkins
               
               echo "Installing aws-cli"
               curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"

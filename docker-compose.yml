@@ -1,12 +1,16 @@
-version: "2"
-services: 
+version: '3.7'
+services:
   jenkins:
-    image: 'docker.io/bitnami/jenkins:2-debian-10'
+    image: jenkins/jenkins:lts
+    privileged: true
     environment: 
+      JAVA_OPTS: "-Dorg.apache.commons.jelly.tags.fmt.timeZone=America/New_York"
       JENKINS_SLAVE_AGENT_PORT: "50000"
-    ports: 
-      - "8080:8080"
-      - "50000:50000"
-      - "5000:5000"
-    volumes: 
-      - "/home/ubuntu/Jenkins:/var/jenkins_home"
+    ports:
+      - 8080:8080
+      - 5000:5000
+      - 50000:50000
+    volumes:
+      - /home/ubuntu/Jenkins:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/local/bin/docker:/usr/local/bin/docker
