@@ -1,0 +1,345 @@
+Description: >
+  Ybrahin Martinez - Static Project with Jenkins Pipelines
+
+Parameters:
+
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+  ### NETWORK PARAMETERS ###
+  VpcCIDR:
+    Description: IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.0.0.0/16
+
+  PublicSubnetCIDR: 
+    Description: IP range (CIDR notation) for this subnet
+    Type: String
+    Default: "10.0.0.0/24"
+
+  ### IAM PARAMETERS ###
+  GroupName:
+    Description: Name of group
+    Type: String
+    Default: jenkins-group
+  
+  UserName:
+    Description: Name of user
+    Type: String
+    Default: jenkins
+  
+  ### SERVER PARAMETERS ###
+  InstanceType:
+    Description: The instance type to use for the bastion host
+    Default: t3.micro
+    Type: String
+    
+  InstanceAMI:
+    Type: String
+    Default: ami-003634241a8fcdec0
+    Description: AMI of a bastion host instance to use
+
+  SSHLocation:
+    Description: Network allowed to connect using ssh to bastion host in public subnet.
+    Default: 0.0.0.0/0
+    Type: String
+
+  KeyName:
+    Description: Keypair for Linux host
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: udagramBastionKey
+
+  ### BUCKET PARAMATERS
+
+  S3BucketAppName:
+    Description: A Bucked name
+    Type: String
+    Default: static-app-jenkins
+
+Resources:
+
+  ### NETWORK CONFIGURATION
+
+  VPC: 
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags: 
+        - Key: Name
+          Value: !Ref EnvironmentName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName
+          
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnetCIDR
+      MapPublicIpOnLaunch: true
+      Tags: 
+        - Key: Name 
+          Value: !Sub ${EnvironmentName} Public Subnet
+
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway: 
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name 
+          Value: !Sub ${EnvironmentName} Public Routes
+
+  DefaultPublicRoute: 
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet
+
+
+  ### IAM CONFIGURATION
+
+  JenkinsUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Ref UserName
+      LoginProfile:
+        Password: "UserJenkins"
+        PasswordResetRequired: true
+
+  JenkinsGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Ref GroupName
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+        - arn:aws:iam::aws:policy/AmazonVPCFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  UserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${EnvironmentName}-Role
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+
+  JenkinsPolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${EnvironmentName}-Jenkins-Policies
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Action:
+          - "ec2:DescribeAddresses"
+          - "ec2:AllocateAddress"
+          - "ec2:DescribeInstances"
+          - "ec2:AssociateAddress"
+          Resource: '*'
+
+        - Effect: Allow
+          Action:
+          - "iam:ChangePassword"
+          Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:user/*'
+      Groups:
+        - !Ref JenkinsGroup
+      Roles:
+        - !Ref UserRole
+
+  AddUserGroup:
+    Type: AWS::IAM::UserToGroupAddition
+    Properties:
+      GroupName: !Ref JenkinsGroup
+      Users:
+        - !Ref JenkinsUser
+
+  InstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+      - !Ref UserRole
+
+  Keys:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref JenkinsUser
+
+  ### SERVER CONFIGURATION ###
+  HostSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow ssh connection to host (basic Jenkins security group)
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 0
+        ToPort: 65535
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: name
+          Value: !Sub ${EnvironmentName} SecGroup Jenkins Host
+
+  EIPHost:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: !Ref VPC
+
+  InstanceHostEC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref InstanceAMI
+      KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref InstanceProfile
+      SecurityGroupIds:
+        - !Ref HostSecGroup
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref PublicSubnet
+      BlockDeviceMappings:
+      - DeviceName: "/dev/sdk"
+        Ebs:
+          VolumeSize: '10'
+      UserData:
+        Fn::Base64: 
+          Fn::Sub:
+            - |
+              #!/bin/bash
+              
+              # Install docker
+              apt-get update
+              apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+              add-apt-repository \
+                "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+                $(lsb_release -cs) \
+                stable"
+              apt-get update
+              apt-get install -y docker-ce docker-ce-cli containerd.io 
+              usermod -aG docker ubuntu
+              systemctl service docker start
+              
+              echo "Instalando docker-compose"
+              curl -L "https://github.com/docker/compose/releases/download/1.25.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+              
+              echo "Instalando jenkins con docker-compose"
+              curl -L https://raw.githubusercontent.com/CraigsTraining/jenkins-ec2-docker/master/docker-compose.yml -o docker-compose.yml
+
+              cat docker-compose.yml
+              
+              docker pull jenkins/jenkins
+              docker-compose build
+              docker-compose up -d
+
+              echo "Exportando password de jenkins"
+              sudo cat /home/ubuntu/Jenkins/secrets/initialAdminPassword > /home/ubuntu/initialAdminPassword
+              
+              apt-get install unzip
+              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+              unzip -qq awscliv2.zip
+              ./aws/install
+              instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+
+              aws ec2 associate-address --instance-id $instance_id --allow-reassociation  --region ${AWS::Region} --allocation-id ${EIPAllocation}
+
+            - EIPAllocation: !GetAtt EIPHost.AllocationId
+
+  ### BUCKET CONFIGURATION
+
+  S3WebApp:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketAppName
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+    DeletionPolicy: Delete
+
+  S3WebAppPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3WebApp
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Sid: PublicReadGetObject
+            Action:
+              - "s3:GetObject"
+            Resource: !Join ['', ['arn:aws:s3:::', !Ref 'S3WebApp', '/*']]
+            Principal:
+              AWS: '*'
+  
+Outputs:
+
+  HostPublicIPAddress:
+    Description: Host public IP
+    Value: !Ref EIPHost
+    Export:
+      Name: !Sub ${EnvironmentName}-PUBLIC-IP
+
+  WebsiteURL:
+    Value: !GetAtt S3WebApp.WebsiteURL
+    Description: URL for website hosted on S3
+    
+  LoginUrl:
+    Value: !Sub https://${AWS::AccountId}.signin.aws.amazon.com/console/
+    Description: URL for login to console
+
+  AccessKey:
+    Value: !Ref Keys
+    Description: AWSAccessKeyId of new user
+    
+  SecretKey:
+    Value: !GetAtt Keys.SecretAccessKey
+    Description: AWSSecretAccessKey of new user
