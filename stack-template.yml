@@ -274,7 +274,7 @@ Resources:
               
               echo "Installing Jenkins with docker-compose"
               curl -L https://raw.githubusercontent.com/y-martinez/static-website-aws-jenkins/master/docker-compose.yml -o docker-compose.yml
-              curl -L https://raw.githubusercontent.com/y-martinez/static-website-aws-jenkins/master/Dockerfile -o docker-compose.yml
+              curl -L https://raw.githubusercontent.com/y-martinez/static-website-aws-jenkins/master/Dockerfile -o Dockerfile
               
               docker pull jenkins/jenkins
               docker-compose build
