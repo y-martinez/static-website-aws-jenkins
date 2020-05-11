@@ -284,7 +284,8 @@ Resources:
               curl -L https://raw.githubusercontent.com/y-martinez/static-website-aws-jenkins/master/docker-compose.yml -o docker-compose.yml
               curl -L https://raw.githubusercontent.com/y-martinez/static-website-aws-jenkins/master/Dockerfile -o Dockerfile
               
-              docker-compose build
+              #docker-compose build
+              docker pull bitnami/jenkins
               docker-compose up -d
 
               echo "Exporting the default Jenkins' password"
