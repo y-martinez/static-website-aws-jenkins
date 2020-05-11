@@ -10,6 +10,7 @@ services:
     ports:
       - 8080:8080
       - 5000:5000
+      - 443:443
       - 50000:50000
     container_name: jenkins
     volumes:
