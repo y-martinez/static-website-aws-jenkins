@@ -255,7 +255,7 @@ Resources:
             - |
               #!/bin/bash
               
-              # Install docker
+              echo "Installing docker and its dependencies"
               apt-get update
               apt-get install -y apt-transport-https ca-certificates curl software-properties-common
               curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
@@ -268,23 +268,26 @@ Resources:
               usermod -aG docker ubuntu
               systemctl service docker start
               
-              echo "Instalando docker-compose"
+              echo "Installing docker-compose"
               curl -L "https://github.com/docker/compose/releases/download/1.25.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
               sudo chmod +x /usr/local/bin/docker-compose
               
-              echo "Instalando jenkins con docker-compose"
-              curl -L https://raw.githubusercontent.com/CraigsTraining/jenkins-ec2-docker/master/docker-compose.yml -o docker-compose.yml
-
+              echo "Installing Jenkins with docker-compose"
+              curl -L https://raw.githubusercontent.com/y-martinez/static-website-aws-jenkins/master/docker-compose.yml -o docker-compose.yml
+              curl -L https://raw.githubusercontent.com/y-martinez/static-website-aws-jenkins/master/Dockerfile -o docker-compose.yml
               cat docker-compose.yml
               
               docker pull jenkins/jenkins
               docker-compose build
               docker-compose up -d
 
-              echo "Exportando password de jenkins"
+              echo "Exporting the default Jenkins' password"
               sudo cat /home/ubuntu/Jenkins/secrets/initialAdminPassword > /home/ubuntu/initialAdminPassword
               
-              apt-get install unzip
+              sudo chown -R ubuntu:ubuntu /home/Jenkins
+              
+              echo "Installing the tools unzip and tidy linter"
+              apt-get install unzip tidy
               curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
               unzip -qq awscliv2.zip
               ./aws/install
