@@ -13,7 +13,16 @@ pipeline {
         stage('Lint HTML') {
             steps {
                 sh 'echo "Verifying the index.html"'
-                sh 'tidy -q -e src/index.html'
+
+                script {
+                    try {
+                        sh 'tidy -q -e src/index.html'
+                    }
+                    catch(all) {
+                        sh 'echo "There is an error in index.html... This will change with tidy..."'
+                        sh 'tidy src/index.html > src/index.html'
+                    }   
+                }
             }
         }
         stage('Upload to AWS') {
