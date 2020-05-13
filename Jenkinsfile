@@ -20,7 +20,7 @@ pipeline {
                     }
                     catch(all) {
                         sh 'echo "There is an error in index.html... This will change with tidy..."'
-                        sh 'tidy src/index.html > src/index.html'
+                        sh 'tidy src/index.html > src/index.html 2> errors.txt'
                     }   
                 }
             }
