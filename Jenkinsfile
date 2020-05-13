@@ -18,11 +18,12 @@ pipeline {
                     try {
                         sh 'tidy -q -e src/index.html'
                     }
-                    catch(all) {
+                    catch(e) {
                         sh 'echo "There is an error in index.html... This will change with tidy..."'
                         sh 'tidy src/index.html > src/index.html 2> errors.txt'
                         currentBuild.result = 'SUCCESS'
-                        return
+                        throw e
+                        System.exit(0)
                     }   
                 }
             }
