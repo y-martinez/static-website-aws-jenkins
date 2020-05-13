@@ -10,6 +10,12 @@ pipeline {
                 '''
             }
         }
+        stage('Lint HTML') {
+            steps {
+                sh 'echo "Verifying the index.html"'
+                sh 'tidy -q -e src/index.html'
+            }
+        }
         stage('Upload to AWS') {
             steps {
                 withAWS(region:'us-west-2',credentials:'6fb5fca4-023f-4878-9844-4e26e7098e4d') {
