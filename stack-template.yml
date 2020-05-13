@@ -218,21 +218,17 @@ Resources:
           ToPort: 22
           CidrIp: !Ref SSHLocation
         - IpProtocol: tcp
-          FromPort: 0
-          ToPort: 65535
+          FromPort: 443
+          ToPort: 443
           CidrIp: 0.0.0.0/0
-        # - IpProtocol: tcp
-        #   FromPort: 443
-        #   ToPort: 443
-        #   CidrIp: 0.0.0.0/0
-        # - IpProtocol: tcp
-        #   FromPort: 5000
-        #   ToPort: 5000
-        #   CidrIp: 0.0.0.0/0
-        # - IpProtocol: tcp
-        #   FromPort: 50000
-        #   ToPort: 50000
-        #   CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 50000
+          ToPort: 50000
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
       - IpProtocol: tcp
         FromPort: 0
